@@ -1,12 +1,16 @@
 package config
 
 import (
+	_ "embed"
 	"errors"
 	"os"
 	"path/filepath"
 
 	"github.com/BurntSushi/toml"
 )
+
+//go:embed default_config.toml
+var defaultConfigFile []byte
 
 // Config holds all luma settings.
 type Config struct {
@@ -111,7 +115,7 @@ func loadFromPath(path string) (Config, error) {
 	_, err := toml.DecodeFile(path, &cfg)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			ensureConfigDir()
+			writeDefaultConfig(path)
 			return cfg, nil
 		}
 		return cfg, err
@@ -125,8 +129,7 @@ func defaultPath() string {
 	return filepath.Join(home, ".config", "luma", "config.toml")
 }
 
-func ensureConfigDir() {
-	home, _ := os.UserHomeDir()
-	dir := filepath.Join(home, ".config", "luma")
-	_ = os.MkdirAll(dir, 0o755)
+func writeDefaultConfig(path string) {
+	_ = os.MkdirAll(filepath.Dir(path), 0o755)
+	_ = os.WriteFile(path, defaultConfigFile, 0o644)
 }
