@@ -128,7 +128,7 @@ func detectDisplays(client *ddc.Client) tea.Cmd {
 			return displaysLoadedMsg{err: err}
 		}
 		for i := range displays {
-			cur, max, gerr := client.GetBrightness(ctx, displays[i].Index)
+			cur, max, gerr := client.GetBrightness(ctx, displays[i])
 			if gerr != nil {
 				displays[i].Brightness = -1
 				continue
@@ -144,7 +144,7 @@ func detectDisplays(client *ddc.Client) tea.Cmd {
 func fetchBrightness(client *ddc.Client, d ddc.Display) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		cur, max, err := client.GetBrightness(ctx, d.Index)
+		cur, max, err := client.GetBrightness(ctx, d)
 		return brightnessUpdatedMsg{displayIdx: d.Index, current: cur, max: max, err: err}
 	}
 }
@@ -153,11 +153,11 @@ func fetchBrightness(client *ddc.Client, d ddc.Display) tea.Cmd {
 func setBrightness(client *ddc.Client, d ddc.Display, value int) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		err := client.SetBrightness(ctx, d.Index, value)
+		err := client.SetBrightness(ctx, d, value)
 		if err != nil {
 			return brightnessUpdatedMsg{displayIdx: d.Index, err: fmt.Errorf("set: %w", err)}
 		}
-		cur, max, err := client.GetBrightness(ctx, d.Index)
+		cur, max, err := client.GetBrightness(ctx, d)
 		return brightnessUpdatedMsg{displayIdx: d.Index, current: cur, max: max, err: err}
 	}
 }
@@ -171,7 +171,7 @@ func setAllBrightness(client *ddc.Client, displays []ddc.Display, value int) tea
 		updated := make([]ddc.Display, len(displays))
 		copy(updated, displays)
 		for i := range updated {
-			cur, max, err := client.GetBrightness(ctx, updated[i].Index)
+			cur, max, err := client.GetBrightness(ctx, updated[i])
 			if err == nil {
 				updated[i].Brightness = cur
 				updated[i].MaxVal = max

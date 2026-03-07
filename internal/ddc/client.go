@@ -45,9 +45,9 @@ func (c *Client) Detect(ctx context.Context) ([]Display, error) {
 	return parseDetect(out), nil
 }
 
-// GetBrightness fetches current and max brightness for a display by its ddcutil index.
-func (c *Client) GetBrightness(ctx context.Context, displayIndex int) (current, max int, err error) {
-	out, err := c.exec.Run(ctx, "--display", strconv.Itoa(displayIndex), "getvcp", "10")
+// GetBrightness fetches current and max brightness for a display using its bus number.
+func (c *Client) GetBrightness(ctx context.Context, d Display) (current, max int, err error) {
+	out, err := c.exec.Run(ctx, "--bus", strconv.Itoa(d.Bus), "getvcp", "10")
 	if err != nil {
 		if isNotFound(err) {
 			return 0, 0, ErrNotFound
@@ -61,9 +61,9 @@ func (c *Client) GetBrightness(ctx context.Context, displayIndex int) (current, 
 	return current, max, nil
 }
 
-// SetBrightness sets brightness for a single display.
-func (c *Client) SetBrightness(ctx context.Context, displayIndex, value int) error {
-	_, err := c.exec.Run(ctx, "--display", strconv.Itoa(displayIndex), "setvcp", "10", strconv.Itoa(value))
+// SetBrightness sets brightness for a single display using its bus number.
+func (c *Client) SetBrightness(ctx context.Context, d Display, value int) error {
+	_, err := c.exec.Run(ctx, "--bus", strconv.Itoa(d.Bus), "setvcp", "10", strconv.Itoa(value))
 	if err != nil {
 		if isNotFound(err) {
 			return ErrNotFound
@@ -76,8 +76,8 @@ func (c *Client) SetBrightness(ctx context.Context, displayIndex, value int) err
 // SetBrightnessAll sets brightness on all displays sequentially through the executor.
 func (c *Client) SetBrightnessAll(ctx context.Context, displays []Display, value int) error {
 	for _, d := range displays {
-		if err := c.SetBrightness(ctx, d.Index, value); err != nil {
-			return fmt.Errorf("display %d: %w", d.Index, err)
+		if err := c.SetBrightness(ctx, d, value); err != nil {
+			return fmt.Errorf("display %d (bus %d): %w", d.Index, d.Bus, err)
 		}
 	}
 	return nil

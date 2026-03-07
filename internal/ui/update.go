@@ -195,7 +195,7 @@ func refreshAllBrightness(client *ddc.Client, displays []ddc.Display) tea.Cmd {
 			if updated[i].Disconnected {
 				continue // skip disconnected displays
 			}
-			cur, max, err := client.GetBrightness(ctx, updated[i].Index)
+			cur, max, err := client.GetBrightness(ctx, updated[i])
 			if err != nil {
 				if errors.Is(err, context.DeadlineExceeded) {
 					updated[i].TimedOut = true
