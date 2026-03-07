@@ -35,7 +35,7 @@ func NewClient(exec *Executor) *Client {
 // Detect returns all DDC/CI displays visible to ddcutil.
 // Returns ErrNotFound if ddcutil is not installed.
 func (c *Client) Detect(ctx context.Context) ([]Display, error) {
-	out, err := c.exec.Run(ctx, "detect", "--brief")
+	out, err := c.exec.Run(ctx, "detect")
 	if err != nil {
 		if isNotFound(err) {
 			return nil, ErrNotFound
@@ -117,7 +117,12 @@ func parseDetect(out string) []Display {
 			}
 		}
 		if strings.HasPrefix(trimmed, "Mfg id:") {
-			current.Name = strings.TrimSpace(strings.TrimPrefix(trimmed, "Mfg id:"))
+			mfg := strings.TrimSpace(strings.TrimPrefix(trimmed, "Mfg id:"))
+			// "AOC - UNK" → take only the part before " - "
+			if idx := strings.Index(mfg, " - "); idx >= 0 {
+				mfg = mfg[:idx]
+			}
+			current.Name = strings.TrimSpace(mfg)
 		}
 		if strings.HasPrefix(trimmed, "Model:") {
 			current.Model = strings.TrimSpace(strings.TrimPrefix(trimmed, "Model:"))

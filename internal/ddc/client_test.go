@@ -8,15 +8,17 @@ func TestParseDetect(t *testing.T) {
 	input := `
 Display 1
    I2C bus:  /dev/i2c-4
-   DRM connector: card1-DP-3
-   Mfg id:   AOC
-   Model:    27G2G4
-   Serial number: ...
+   DRM_connector:           card1-DP-2
+   EDID synopsis:
+      Mfg id:               AOC - UNK
+      Model:                27G2G4
+      Serial number:
 
 Display 2
    I2C bus:  /dev/i2c-6
-   Mfg id:   CMI
-   Model:    GP2711
+   EDID synopsis:
+      Mfg id:               CMI - C-Media Electronics
+      Model:                GP2711
 `
 	displays := parseDetect(input)
 	if len(displays) != 2 {
