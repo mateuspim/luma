@@ -15,4 +15,4 @@ max_ddcutil_procs = 1     # hard cap on concurrent ddcutil processes [1-2]
 command_timeout_s = 8     # kill ddcutil if it hangs beyond this [3-30]
 
 [theme]
-accent_color = "#A78BFA"
+accent_color = "#9B59B6"

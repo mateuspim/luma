@@ -91,7 +91,7 @@ debounce_ms = 500
 	if cfg.Steps.Small != 1 {
 		t.Errorf("Steps.Small = %d, want 1 (default)", cfg.Steps.Small)
 	}
-	if cfg.Theme.AccentColor != "#A78BFA" {
+	if cfg.Theme.AccentColor != "#9B59B6" {
 		t.Errorf("AccentColor = %q, want default", cfg.Theme.AccentColor)
 	}
 }

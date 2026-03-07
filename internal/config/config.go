@@ -59,7 +59,7 @@ func Default() Config {
 			CommandTimeoutS: 8,
 		},
 		Theme: Theme{
-			AccentColor: "#A78BFA",
+			AccentColor: "#9B59B6",
 		},
 	}
 }
