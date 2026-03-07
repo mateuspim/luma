@@ -9,11 +9,9 @@ import (
 
 const (
 	boxWidth       = 74
-	listBarWidth   = 48
-	sliderBarWidth = 64
+	listBarWidth   = 44 // fill blocks inside ╸...╺ caps, with 3-space padding each side
+	sliderBarWidth = 60
 	nameColWidth   = 14
-	barFull        = '█'
-	barEmpty       = '─'
 )
 
 func (m Model) View() string {
@@ -92,10 +90,10 @@ func (m Model) viewListRow(i int, d ddc.Display) string {
 		maxVal = 100
 	}
 	pct := d.Brightness * 100 / maxVal
-	bar := renderBar(d.Brightness, maxVal, listBarWidth, m.styles)
+	bar := renderGradientBar(d.Brightness, maxVal, listBarWidth, m.cfg.Theme.AccentColor)
 	pctStr := m.styles.Accent.Render(fmt.Sprintf("%3d%%", pct))
 
-	return m.boxLine(cursor + namePadded + "  " + bar + "  " + pctStr)
+	return m.boxLine(cursor + namePadded + "   " + bar + "   " + pctStr)
 }
 
 // viewSliderScreen renders Screen 2 (per-display) or Screen 3 (all displays).
@@ -123,10 +121,9 @@ func (m Model) viewSliderScreen(all bool) string {
 	sb.WriteString(m.boxLine(""))
 
 	// Slider bar row
-	maxVal := 100
-	bar := renderBar(m.sliderVal, maxVal, sliderBarWidth, m.styles)
+	bar := renderGradientBar(m.sliderVal, 100, sliderBarWidth, m.cfg.Theme.AccentColor)
 	pctStr := m.styles.Accent.Render(fmt.Sprintf("%3d%%", m.sliderVal))
-	sb.WriteString(m.boxLine("  " + bar + "  " + pctStr))
+	sb.WriteString(m.boxLine("   " + bar + "   " + pctStr))
 
 	// Empty padding row
 	sb.WriteString(m.boxLine(""))
@@ -193,20 +190,6 @@ func (m Model) boxRow(left, right string) string {
 		space = 1
 	}
 	return "│" + left + strings.Repeat(" ", space) + right + "│\n"
-}
-
-// renderBar produces a filled/empty block bar.
-func renderBar(current, max, width int, s Styles) string {
-	if max <= 0 {
-		max = 100
-	}
-	filled := current * width / max
-	if filled > width {
-		filled = width
-	}
-	full := s.Bar.Render(strings.Repeat(string(barFull), filled))
-	empty := s.BarEmpty.Render(strings.Repeat(string(barEmpty), width-filled))
-	return full + empty
 }
 
 // truncate clips s to maxLen runes.
