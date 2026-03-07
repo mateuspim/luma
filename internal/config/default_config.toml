@@ -6,6 +6,8 @@ large  = 10   # {/} keys
 [display]
 refresh_interval_ms = 5000   # 0 = disabled, minimum 2000 if enabled
 show_display_name   = true
+# I2C bus numbers are auto-detected at startup from `ddcutil detect` and
+# cached for the session — all calls use --bus N instead of --display N.
 
 [guardrails]
 debounce_ms       = 300   # wait after last keypress before firing ddcutil [100-2000]
