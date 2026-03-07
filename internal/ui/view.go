@@ -56,8 +56,9 @@ func (m Model) viewList() string {
 	}
 
 	sb.WriteString("├" + strings.Repeat("─", boxWidth-2) + "┤\n")
-	footer := fmt.Sprintf("  ↑/↓ select · +/- ±%d · [/] ±%d · {/} ±%d · Enter slider · [a]ll · [q]uit",
-		m.cfg.Steps.Small, m.cfg.Steps.Medium, m.cfg.Steps.Large)
+	separator := m.styles.Accent.Render(" ◆ ")
+	footer := fmt.Sprintf("  ↑/↓ select · Enter slider · [a]ll · [q]uit%s+/- ±%d · [/] ±%d · {/} ±%d",
+		separator, m.cfg.Steps.Small, m.cfg.Steps.Medium, m.cfg.Steps.Large)
 	sb.WriteString(m.boxLine(footer))
 	sb.WriteString("╰" + strings.Repeat("─", boxWidth-2) + "╯\n")
 
