@@ -117,7 +117,8 @@ func (m Model) handleNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	default:
 		k := msg.String()
-		if len(k) == 1 && k[0] >= '0' && k[0] <= '9' {
+		if len(k) == 1 && k[0] >= '0' && k[0] <= '9' && m.selected >= 0 && m.selected < len(m.displays) {
+			m.inputOrigVal = m.displays[m.selected].Brightness
 			m.mode = ModeInput
 			m.inputBuf = k
 		}
@@ -201,6 +202,10 @@ func (m Model) handleSliderKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) handleInputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, m.keys.Cancel):
+		// Restore original brightness on cancel.
+		if m.selected >= 0 && m.selected < len(m.displays) {
+			m.displays[m.selected].Brightness = m.inputOrigVal
+		}
 		m.mode = ModeNormal
 		m.inputBuf = ""
 

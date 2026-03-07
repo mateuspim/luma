@@ -34,7 +34,8 @@ type Model struct {
 	sliderVal int
 
 	// input state
-	inputBuf string
+	inputBuf      string
+	inputOrigVal  int // brightness before entering ModeInput (for Esc restore)
 
 	// debounce: sequence counter per display index
 	// When a step key fires, seq increments. The debounce timer carries
