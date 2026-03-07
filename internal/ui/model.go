@@ -110,9 +110,13 @@ func New(cfg config.Config) Model {
 	}
 }
 
-// Init triggers display detection on startup.
+// Init triggers display detection on startup and schedules the first refresh tick.
 func (m Model) Init() tea.Cmd {
-	return detectDisplays(m.client)
+	cmds := []tea.Cmd{detectDisplays(m.client)}
+	if m.cfg.Display.RefreshIntervalMs > 0 {
+		cmds = append(cmds, autoRefreshCmd(m.cfg.Display.RefreshIntervalMs))
+	}
+	return tea.Batch(cmds...)
 }
 
 // detectDisplays fetches all displays and their brightness values.

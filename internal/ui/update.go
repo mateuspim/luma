@@ -1,8 +1,12 @@
 package ui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	"context"
+
 	"github.com/charmbracelet/bubbles/key"
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/pym/luma/internal/ddc"
 )
 
 // Update handles all incoming messages.
@@ -45,6 +49,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case debounceFireMsg:
 		return m.handleDebounceFire(msg)
+
+	case tickMsg:
+		return m.handleTick()
 
 	case tea.KeyMsg:
 		return m.handleKey(msg)
@@ -145,6 +152,49 @@ func (m Model) applyStep(delta int) (tea.Model, tea.Cmd) {
 	m.anyDebouncing = true
 
 	return m, debounceCmd(d.Index, d.Brightness, seq, m.cfg.Guardrails.DebounceMs)
+}
+
+// handleTick processes auto-refresh ticks.
+// Skips the refresh if the executor is busy, a mode is active, or a debounce is pending.
+func (m Model) handleTick() (tea.Model, tea.Cmd) {
+	// Schedule the next tick regardless.
+	var nextTick tea.Cmd
+	if m.cfg.Display.RefreshIntervalMs > 0 {
+		nextTick = autoRefreshCmd(m.cfg.Display.RefreshIntervalMs)
+	}
+
+	// Guard: skip if any condition makes it unsafe.
+	if m.mode != ModeNormal || m.executor.IsBusy() || m.anyDebouncing || m.loading {
+		return m, nextTick
+	}
+
+	// Safe to refresh: fetch all display brightnesses.
+	return m, tea.Batch(nextTick, refreshAllBrightness(m.client, m.displays))
+}
+
+// refreshAllBrightness fetches brightness for all displays sequentially.
+func refreshAllBrightness(client *ddc.Client, displays []ddc.Display) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		updated := make([]ddc.Display, len(displays))
+		copy(updated, displays)
+		changed := false
+		for i := range updated {
+			cur, max, err := client.GetBrightness(ctx, updated[i].Index)
+			if err != nil {
+				continue
+			}
+			if cur != updated[i].Brightness || max != updated[i].MaxVal {
+				updated[i].Brightness = cur
+				updated[i].MaxVal = max
+				changed = true
+			}
+		}
+		if !changed {
+			return nil // no-op, avoid flicker
+		}
+		return refreshDoneMsg{displays: updated}
+	}
 }
 
 // handleDebounceFire fires ddcutil only if the sequence still matches.
