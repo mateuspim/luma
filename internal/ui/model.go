@@ -83,6 +83,13 @@ func debounceCmd(displayIdx, value, seq, debounceMs int) tea.Cmd {
 	})
 }
 
+// autoRefreshCmd fires tickMsg after intervalMs.
+func autoRefreshCmd(intervalMs int) tea.Cmd {
+	return tea.Tick(time.Duration(intervalMs)*time.Millisecond, func(_ time.Time) tea.Msg {
+		return tickMsg{}
+	})
+}
+
 type refreshDoneMsg struct {
 	displays []ddc.Display
 }
