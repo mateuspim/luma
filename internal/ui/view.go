@@ -8,12 +8,12 @@ import (
 )
 
 const (
-	boxWidth      = 48
-	listBarWidth  = 20
-	sliderBarWidth = 34
-	nameColWidth  = 14
-	barFull       = '█'
-	barEmpty      = '─'
+	boxWidth       = 74
+	listBarWidth   = 48
+	sliderBarWidth = 64
+	nameColWidth   = 14
+	barFull        = '█'
+	barEmpty       = '─'
 )
 
 func (m Model) View() string {
@@ -58,7 +58,9 @@ func (m Model) viewList() string {
 	}
 
 	sb.WriteString("├" + strings.Repeat("─", boxWidth-2) + "┤\n")
-	sb.WriteString(m.boxLine("  ↑/↓ select · +/- adjust · Enter slider"))
+	footer := fmt.Sprintf("  ↑/↓ select · +/- ±%d · [/] ±%d · {/} ±%d · Enter slider · [a]ll · [q]uit",
+		m.cfg.Steps.Small, m.cfg.Steps.Medium, m.cfg.Steps.Large)
+	sb.WriteString(m.boxLine(footer))
 	sb.WriteString("╰" + strings.Repeat("─", boxWidth-2) + "╯\n")
 
 	return sb.String()
@@ -130,7 +132,9 @@ func (m Model) viewSliderScreen(all bool) string {
 	sb.WriteString(m.boxLine(""))
 
 	sb.WriteString("├" + strings.Repeat("─", boxWidth-2) + "┤\n")
-	sb.WriteString(m.boxLine("  ←/→ adjust · [ ] ±5 · Enter apply · Esc back"))
+	footer := fmt.Sprintf("  ←/→ ±%d · [/] ±%d · {/} ±%d · Enter apply · Esc back",
+		m.cfg.Steps.Small, m.cfg.Steps.Medium, m.cfg.Steps.Large)
+	sb.WriteString(m.boxLine(footer))
 	sb.WriteString("╰" + strings.Repeat("─", boxWidth-2) + "╯\n")
 
 	return sb.String()
