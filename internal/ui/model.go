@@ -25,6 +25,7 @@ type Model struct {
 	cfg      config.Config
 	client   *ddc.Client
 	executor *ddc.Executor
+	version  string
 
 	displays []ddc.Display
 	selected int
@@ -104,13 +105,14 @@ type refreshDoneMsg struct {
 }
 
 // New constructs the root model.
-func New(cfg config.Config) Model {
+func New(cfg config.Config, version string) Model {
 	exec := ddc.NewExecutor(cfg.Guardrails.MaxDdcutilProcs, cfg.Guardrails.CommandTimeoutS)
 	client := ddc.NewClient(exec)
 	return Model{
 		cfg:         cfg,
 		client:      client,
 		executor:    exec,
+		version:     version,
 		loading:     true,
 		debounceSeq: make(map[int]int),
 		styles:      newStyles(cfg.Theme.AccentColor),

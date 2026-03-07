@@ -41,8 +41,8 @@ func (m Model) viewList() string {
 
 	sb.WriteString("╭" + strings.Repeat("─", boxWidth-2) + "╮\n")
 
-	// Header: ◈ luma with spinner when ddcutil is running
-	header := m.styles.Accent.Render("◈ luma")
+	// Header: ◈ luma with version and spinner when ddcutil is running
+	header := m.styles.Accent.Render("◈ luma " + m.version)
 	if m.executor.IsBusy() {
 		spinnerFrames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 		header += " " + spinnerFrames[m.spinnerFrame%len(spinnerFrames)]
@@ -112,11 +112,11 @@ func (m Model) viewSliderScreen(all bool) string {
 	// Header
 	var title string
 	if all {
-		title = "◈ luma · All Displays"
+		title = "◈ luma " + m.version + " · All Displays"
 	} else if m.selected >= 0 && m.selected < len(m.displays) {
-		title = "◈ luma · " + m.displays[m.selected].Name
+		title = "◈ luma " + m.version + " · " + m.displays[m.selected].Name
 	} else {
-		title = "◈ luma"
+		title = "◈ luma " + m.version
 	}
 	lhs := m.styles.Accent.Render(title)
 	rhs := "[q]uit"
@@ -147,7 +147,7 @@ func (m Model) viewSliderScreen(all bool) string {
 func (m Model) viewError() string {
 	var sb strings.Builder
 	sb.WriteString("╭" + strings.Repeat("─", boxWidth-2) + "╮\n")
-	sb.WriteString(m.boxLine(m.styles.Accent.Render("◈ luma")))
+	sb.WriteString(m.boxLine(m.styles.Accent.Render("◈ luma " + m.version)))
 	sb.WriteString("├" + strings.Repeat("─", boxWidth-2) + "┤\n")
 	sb.WriteString(m.boxLine(m.styles.Error.Render("  Error: " + m.err.Error())))
 	if isNotFound(m.err) {
@@ -161,7 +161,7 @@ func (m Model) viewError() string {
 func (m Model) viewLoading() string {
 	var sb strings.Builder
 	sb.WriteString("╭" + strings.Repeat("─", boxWidth-2) + "╮\n")
-	sb.WriteString(m.boxLine(m.styles.Accent.Render("◈ luma") + m.styles.Busy.Render(" ⟳ detecting displays...")))
+	sb.WriteString(m.boxLine(m.styles.Accent.Render("◈ luma "+m.version) + m.styles.Busy.Render(" ⟳ detecting displays...")))
 	sb.WriteString("╰" + strings.Repeat("─", boxWidth-2) + "╯\n")
 	return sb.String()
 }
@@ -169,7 +169,7 @@ func (m Model) viewLoading() string {
 func (m Model) viewNoDisplays() string {
 	var sb strings.Builder
 	sb.WriteString("╭" + strings.Repeat("─", boxWidth-2) + "╮\n")
-	sb.WriteString(m.boxLine(m.styles.Accent.Render("◈ luma")))
+	sb.WriteString(m.boxLine(m.styles.Accent.Render("◈ luma " + m.version)))
 	sb.WriteString("├" + strings.Repeat("─", boxWidth-2) + "┤\n")
 	sb.WriteString(m.boxLine("  No DDC/CI displays found. Check connections."))
 	sb.WriteString(m.boxLine("  Press q to quit."))

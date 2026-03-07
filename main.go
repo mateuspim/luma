@@ -10,9 +10,11 @@ import (
 	"github.com/pym/luma/internal/ui"
 )
 
+var version = "dev"
+
 func main() {
 	cfg := config.LoadOrDefault()
-	m := ui.New(cfg)
+	m := ui.New(cfg, version)
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
