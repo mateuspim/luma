@@ -12,6 +12,8 @@ type KeyMap struct {
 	Dec       key.Binding // -   (±small)
 	IncMed    key.Binding // ]   (±medium)
 	DecMed    key.Binding // [   (±medium)
+	IncLrg    key.Binding // }   (±large)
+	DecLrg    key.Binding // {   (±large)
 	AllSlider key.Binding // a   (set all)
 	Confirm   key.Binding // Enter
 	Cancel    key.Binding // Esc
@@ -28,6 +30,8 @@ func defaultKeyMap() KeyMap {
 		Dec:       key.NewBinding(key.WithKeys("-")),
 		IncMed:    key.NewBinding(key.WithKeys("]")),
 		DecMed:    key.NewBinding(key.WithKeys("[")),
+		IncLrg:    key.NewBinding(key.WithKeys("}")),
+		DecLrg:    key.NewBinding(key.WithKeys("{")),
 		AllSlider: key.NewBinding(key.WithKeys("a")),
 		Confirm:   key.NewBinding(key.WithKeys("enter")),
 		Cancel:    key.NewBinding(key.WithKeys("esc")),

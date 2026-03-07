@@ -121,6 +121,12 @@ func (m Model) handleNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keys.DecMed):
 		return m.applyStep(-m.cfg.Steps.Medium)
+
+	case key.Matches(msg, m.keys.IncLrg):
+		return m.applyStep(m.cfg.Steps.Large)
+
+	case key.Matches(msg, m.keys.DecLrg):
+		return m.applyStep(-m.cfg.Steps.Large)
 	}
 
 	return m, nil
@@ -155,6 +161,12 @@ func (m Model) handleSliderKey(msg tea.KeyMsg, all bool) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keys.IncMed):
 		m.sliderVal = clampInt(m.sliderVal+m.cfg.Steps.Medium, 0, 100)
+
+	case key.Matches(msg, m.keys.IncLrg):
+		m.sliderVal = clampInt(m.sliderVal+m.cfg.Steps.Large, 0, 100)
+
+	case key.Matches(msg, m.keys.DecLrg):
+		m.sliderVal = clampInt(m.sliderVal-m.cfg.Steps.Large, 0, 100)
 	}
 
 	return m, nil
