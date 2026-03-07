@@ -11,9 +11,9 @@ import (
 // Display represents a detected monitor.
 type Display struct {
 	Index        int
-	Bus          int // I2C bus number, used for --bus N in ddcutil calls
-	Name         string
-	Model        string
+	Bus          int    // I2C bus number, used for --bus N in ddcutil calls
+	Name         string // Human-readable: "Mfg Model", e.g. "AOC 27G2G4"
+	Model        string // Raw model string from ddcutil
 	Brightness   int
 	MaxVal       int
 	Disconnected bool
@@ -88,7 +88,8 @@ func (c *Client) SetBrightnessAll(ctx context.Context, displays []Display, value
 //
 //	Display 1
 //	   I2C bus:  /dev/i2c-4
-//	   Model:   Dell U2723D
+//	   Mfg id:   AOC
+//	   Model:    27G2G4
 func parseDetect(out string) []Display {
 	var displays []Display
 	var current *Display
@@ -97,11 +98,12 @@ func parseDetect(out string) []Display {
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "Display ") {
 			if current != nil {
+				finalizeDisplay(current)
 				displays = append(displays, *current)
 			}
 			indexStr := strings.TrimPrefix(trimmed, "Display ")
 			idx, _ := strconv.Atoi(strings.Fields(indexStr)[0])
-			current = &Display{Index: idx, Name: trimmed}
+			current = &Display{Index: idx}
 			continue
 		}
 		if current == nil {
@@ -114,14 +116,34 @@ func parseDetect(out string) []Display {
 				current.Bus = bus
 			}
 		}
+		if strings.HasPrefix(trimmed, "Mfg id:") {
+			current.Name = strings.TrimSpace(strings.TrimPrefix(trimmed, "Mfg id:"))
+		}
 		if strings.HasPrefix(trimmed, "Model:") {
 			current.Model = strings.TrimSpace(strings.TrimPrefix(trimmed, "Model:"))
 		}
 	}
 	if current != nil {
+		finalizeDisplay(current)
 		displays = append(displays, *current)
 	}
 	return displays
+}
+
+// finalizeDisplay builds Display.Name from Mfg id + Model, falling back to "Display N".
+func finalizeDisplay(d *Display) {
+	mfg := d.Name // temporarily holds Mfg id during parsing
+	model := d.Model
+	switch {
+	case mfg != "" && model != "":
+		d.Name = mfg + " " + model
+	case model != "":
+		d.Name = model
+	case mfg != "":
+		d.Name = mfg
+	default:
+		d.Name = fmt.Sprintf("Display %d", d.Index)
+	}
 }
 
 // parseVCP parses `ddcutil getvcp 10` output for current/max brightness.

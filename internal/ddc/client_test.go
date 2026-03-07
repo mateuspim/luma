@@ -9,12 +9,14 @@ func TestParseDetect(t *testing.T) {
 Display 1
    I2C bus:  /dev/i2c-4
    DRM connector: card1-DP-3
-   Model:   Dell U2723D
+   Mfg id:   AOC
+   Model:    27G2G4
    Serial number: ...
 
 Display 2
    I2C bus:  /dev/i2c-6
-   Model:   LG ULTRAFINE
+   Mfg id:   CMI
+   Model:    GP2711
 `
 	displays := parseDetect(input)
 	if len(displays) != 2 {
@@ -26,8 +28,11 @@ Display 2
 	if displays[0].Bus != 4 {
 		t.Errorf("display[0].Bus = %d, want 4", displays[0].Bus)
 	}
-	if displays[0].Model != "Dell U2723D" {
-		t.Errorf("display[0].Model = %q, want %q", displays[0].Model, "Dell U2723D")
+	if displays[0].Model != "27G2G4" {
+		t.Errorf("display[0].Model = %q, want %q", displays[0].Model, "27G2G4")
+	}
+	if displays[0].Name != "AOC 27G2G4" {
+		t.Errorf("display[0].Name = %q, want %q", displays[0].Name, "AOC 27G2G4")
 	}
 	if displays[1].Index != 2 {
 		t.Errorf("display[1].Index = %d, want 2", displays[1].Index)
@@ -35,8 +40,23 @@ Display 2
 	if displays[1].Bus != 6 {
 		t.Errorf("display[1].Bus = %d, want 6", displays[1].Bus)
 	}
-	if displays[1].Model != "LG ULTRAFINE" {
-		t.Errorf("display[1].Model = %q, want %q", displays[1].Model, "LG ULTRAFINE")
+	if displays[1].Name != "CMI GP2711" {
+		t.Errorf("display[1].Name = %q, want %q", displays[1].Name, "CMI GP2711")
+	}
+}
+
+func TestParseDetect_FallbackName(t *testing.T) {
+	// No Mfg id or Model → falls back to "Display N"
+	input := `
+Display 3
+   I2C bus:  /dev/i2c-2
+`
+	displays := parseDetect(input)
+	if len(displays) != 1 {
+		t.Fatalf("expected 1 display, got %d", len(displays))
+	}
+	if displays[0].Name != "Display 3" {
+		t.Errorf("Name = %q, want %q", displays[0].Name, "Display 3")
 	}
 }
 
