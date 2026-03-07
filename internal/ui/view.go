@@ -41,13 +41,13 @@ func (m Model) viewList() string {
 
 	sb.WriteString("╭" + strings.Repeat("─", boxWidth-2) + "╮\n")
 
-	// Header: ◈ luma on left, [a]ll  [q]uit on right
-	lhs := m.styles.Accent.Render("◈ luma")
+	// Header: ◈ luma with spinner when ddcutil is running
+	header := m.styles.Accent.Render("◈ luma")
 	if m.executor.IsBusy() {
-		lhs += m.styles.Busy.Render(" ⟳")
+		spinnerFrames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+		header += " " + spinnerFrames[m.spinnerFrame%len(spinnerFrames)]
 	}
-	rhs := "[a]ll  [q]uit"
-	sb.WriteString(m.boxRow(lhs, rhs))
+	sb.WriteString(m.boxLine(header))
 
 	sb.WriteString("├" + strings.Repeat("─", boxWidth-2) + "┤\n")
 

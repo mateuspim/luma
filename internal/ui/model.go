@@ -15,9 +15,9 @@ import (
 type Mode int
 
 const (
-	ModeNormal Mode = iota
-	ModeSlider    // per-display slider (Enter from list)
-	ModeAllSlider // set-all slider (a from list)
+	ModeNormal    Mode = iota
+	ModeSlider         // per-display slider (Enter from list)
+	ModeAllSlider      // set-all slider (a from list)
 )
 
 // Model is the root Bubble Tea model.
@@ -41,6 +41,9 @@ type Model struct {
 
 	// anyDebouncing is true if any display has a pending debounce timer.
 	anyDebouncing bool
+
+	// spinnerFrame is the current index into spinnerFrames.
+	spinnerFrame int
 
 	loading bool
 	err     error
@@ -73,6 +76,8 @@ type debounceFireMsg struct {
 
 type tickMsg struct{}
 
+type spinnerTickMsg struct{}
+
 // debounceCmd returns a command that fires debounceFireMsg after debounceMs.
 func debounceCmd(displayIdx, value, seq, debounceMs int) tea.Cmd {
 	return tea.Tick(time.Duration(debounceMs)*time.Millisecond, func(_ time.Time) tea.Msg {
@@ -84,6 +89,13 @@ func debounceCmd(displayIdx, value, seq, debounceMs int) tea.Cmd {
 func autoRefreshCmd(intervalMs int) tea.Cmd {
 	return tea.Tick(time.Duration(intervalMs)*time.Millisecond, func(_ time.Time) tea.Msg {
 		return tickMsg{}
+	})
+}
+
+// spinnerTickCmd fires spinnerTickMsg every 80ms for smooth spinner animation.
+func spinnerTickCmd() tea.Cmd {
+	return tea.Tick(80*time.Millisecond, func(_ time.Time) tea.Msg {
+		return spinnerTickMsg{}
 	})
 }
 
@@ -108,7 +120,7 @@ func New(cfg config.Config) Model {
 
 // Init triggers display detection on startup and schedules the first refresh tick.
 func (m Model) Init() tea.Cmd {
-	cmds := []tea.Cmd{detectDisplays(m.client)}
+	cmds := []tea.Cmd{detectDisplays(m.client), spinnerTickCmd()}
 	if m.cfg.Display.RefreshIntervalMs > 0 {
 		cmds = append(cmds, autoRefreshCmd(m.cfg.Display.RefreshIntervalMs))
 	}

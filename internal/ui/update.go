@@ -60,6 +60,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tickMsg:
 		return m.handleTick()
 
+	case spinnerTickMsg:
+		m.spinnerFrame++
+		return m, spinnerTickCmd()
+
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 	}
