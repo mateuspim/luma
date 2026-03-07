@@ -16,8 +16,8 @@ type Mode int
 
 const (
 	ModeNormal Mode = iota
-	ModeSlider
-	ModeInput
+	ModeSlider    // per-display slider (Enter from list)
+	ModeAllSlider // set-all slider (a from list)
 )
 
 // Model is the root Bubble Tea model.
@@ -32,10 +32,6 @@ type Model struct {
 
 	// slider state
 	sliderVal int
-
-	// input state
-	inputBuf      string
-	inputOrigVal  int // brightness before entering ModeInput (for Esc restore)
 
 	// debounce: sequence counter per display index
 	// When a step key fires, seq increments. The debounce timer carries
