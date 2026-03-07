@@ -11,6 +11,7 @@ import (
 // Display represents a detected monitor.
 type Display struct {
 	Index        int
+	Bus          int // I2C bus number, used for --bus N in ddcutil calls
 	Name         string
 	Model        string
 	Brightness   int
@@ -86,6 +87,7 @@ func (c *Client) SetBrightnessAll(ctx context.Context, displays []Display, value
 // Example lines:
 //
 //	Display 1
+//	   I2C bus:  /dev/i2c-4
 //	   Model:   Dell U2723D
 func parseDetect(out string) []Display {
 	var displays []Display
@@ -104,6 +106,13 @@ func parseDetect(out string) []Display {
 		}
 		if current == nil {
 			continue
+		}
+		if strings.Contains(line, "I2C bus:") {
+			parts := strings.Split(line, "/dev/i2c-")
+			if len(parts) == 2 {
+				bus, _ := strconv.Atoi(strings.TrimSpace(parts[1]))
+				current.Bus = bus
+			}
 		}
 		if strings.HasPrefix(trimmed, "Model:") {
 			current.Model = strings.TrimSpace(strings.TrimPrefix(trimmed, "Model:"))

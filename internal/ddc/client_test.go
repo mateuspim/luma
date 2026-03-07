@@ -23,11 +23,17 @@ Display 2
 	if displays[0].Index != 1 {
 		t.Errorf("display[0].Index = %d, want 1", displays[0].Index)
 	}
+	if displays[0].Bus != 4 {
+		t.Errorf("display[0].Bus = %d, want 4", displays[0].Bus)
+	}
 	if displays[0].Model != "Dell U2723D" {
 		t.Errorf("display[0].Model = %q, want %q", displays[0].Model, "Dell U2723D")
 	}
 	if displays[1].Index != 2 {
 		t.Errorf("display[1].Index = %d, want 2", displays[1].Index)
+	}
+	if displays[1].Bus != 6 {
+		t.Errorf("display[1].Bus = %d, want 6", displays[1].Bus)
 	}
 	if displays[1].Model != "LG ULTRAFINE" {
 		t.Errorf("display[1].Model = %q, want %q", displays[1].Model, "LG ULTRAFINE")
