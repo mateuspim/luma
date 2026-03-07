@@ -70,9 +70,10 @@ func (m Model) viewListRow(i int, d ddc.Display) string {
 	name := truncate(d.Name, nameColWidth)
 	namePadded := fmt.Sprintf("%-*s", nameColWidth, name)
 
-	if i == m.selected {
+	selected := i == m.selected
+	if selected {
 		cursor = m.styles.Accent.Render("▸ ")
-		namePadded = m.styles.Accent.Render(namePadded)
+		namePadded = m.styles.AccentBold.Render(namePadded)
 	}
 
 	status := ""
@@ -91,7 +92,12 @@ func (m Model) viewListRow(i int, d ddc.Display) string {
 	}
 	pct := d.Brightness * 100 / maxVal
 	bar := renderGradientBar(d.Brightness, maxVal, listBarWidth, m.cfg.Theme.AccentColor)
-	pctStr := m.styles.Accent.Render(fmt.Sprintf("%3d%%", pct))
+	pctStr := fmt.Sprintf("%3d%%", pct)
+	if selected {
+		pctStr = m.styles.AccentBold.Render(pctStr)
+	} else {
+		pctStr = m.styles.Accent.Render(pctStr)
+	}
 
 	return m.boxLine(cursor + namePadded + "   " + bar + "   " + pctStr)
 }
