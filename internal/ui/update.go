@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"errors"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -36,9 +37,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if msg.err != nil {
-			// Mark display as timed out or just leave value as-is.
+			if isTimeout(msg.err) {
+				m.displays[i].TimedOut = true
+			} else if isBusy(msg.err) {
+				// Busy: command was dropped, display row will show ⚠ briefly via TimedOut=false.
+				// No state change needed; the executor being free again will clear on next refresh.
+			} else {
+				// Unknown error: mark disconnected.
+				m.displays[i].Disconnected = true
+			}
 			return m, nil
 		}
+		// Successful update: clear any error flags.
+		m.displays[i].TimedOut = false
+		m.displays[i].Disconnected = false
 		m.displays[i].Brightness = msg.current
 		m.displays[i].MaxVal = msg.max
 		return m, nil
@@ -180,10 +192,18 @@ func refreshAllBrightness(client *ddc.Client, displays []ddc.Display) tea.Cmd {
 		copy(updated, displays)
 		changed := false
 		for i := range updated {
+			if updated[i].Disconnected {
+				continue // skip disconnected displays
+			}
 			cur, max, err := client.GetBrightness(ctx, updated[i].Index)
 			if err != nil {
+				if errors.Is(err, context.DeadlineExceeded) {
+					updated[i].TimedOut = true
+					changed = true
+				}
 				continue
 			}
+			updated[i].TimedOut = false
 			if cur != updated[i].Brightness || max != updated[i].MaxVal {
 				updated[i].Brightness = cur
 				updated[i].MaxVal = max
@@ -309,6 +329,20 @@ func clampInt(v, min, max int) int {
 		return max
 	}
 	return v
+}
+
+func isTimeout(err error) bool {
+	if err == nil {
+		return false
+	}
+	return errors.Is(err, context.DeadlineExceeded)
+}
+
+func isBusy(err error) bool {
+	if err == nil {
+		return false
+	}
+	return errors.Is(err, ddc.ErrBusy)
 }
 
 func parseInputVal(s string) int {
