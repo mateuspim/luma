@@ -1,0 +1,16 @@
+[steps]
+small  = 1    # +/- keys
+medium = 5    # [/] keys
+large  = 10   # {/} keys
+
+[display]
+refresh_interval_ms = 5000   # 0 = disabled, minimum 2000 if enabled
+show_display_name   = true
+
+[guardrails]
+debounce_ms       = 300   # wait after last keypress before firing ddcutil [100-2000]
+max_ddcutil_procs = 1     # hard cap on concurrent ddcutil processes [1-2]
+command_timeout_s = 8     # kill ddcutil if it hangs beyond this [3-30]
+
+[theme]
+accent_color = "#A78BFA"
