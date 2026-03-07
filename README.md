@@ -11,8 +11,35 @@
 
 ## Installation
 
+### From Release (Recommended)
+
+Download the latest release for your platform:
+
 ```sh
-git clone https://github.com/pym/luma
+# Linux (amd64)
+curl -L https://github.com/mateuspim/luma/releases/download/latest/luma-linux-amd64.tar.gz | tar xz
+sudo mv luma /usr/local/bin/
+
+# Linux (arm64)
+curl -L https://github.com/mateuspim/luma/releases/download/latest/luma-linux-arm64.tar.gz | tar xz
+sudo mv luma /usr/local/bin/
+
+# macOS (Apple Silicon)
+curl -L https://github.com/mateuspim/luma/releases/download/latest/luma-darwin-arm64.tar.gz | tar xz
+sudo mv luma /usr/local/bin/
+```
+
+Copy the example config:
+
+```sh
+mkdir -p ~/.config/luma
+cp config.toml.example ~/.config/luma/config.toml
+```
+
+### From Source
+
+```sh
+git clone https://github.com/mateuspim/luma
 cd luma
 make build
 ```
@@ -23,6 +50,17 @@ Copy the example config:
 mkdir -p ~/.config/luma
 cp config.toml.example ~/.config/luma/config.toml
 ```
+
+### Creating a Release
+
+To trigger a versioned release:
+
+```sh
+git tag v1.0.0
+git push --tags
+```
+
+This will automatically build binaries for all platforms and create a GitHub Release with auto-generated changelog.
 
 ## DDC/CI Optimization
 
