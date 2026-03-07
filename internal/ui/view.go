@@ -91,7 +91,7 @@ func (m Model) viewListRow(i int, d ddc.Display) string {
 	}
 	pct := d.Brightness * 100 / maxVal
 	bar := renderBar(d.Brightness, maxVal, listBarWidth, m.styles)
-	pctStr := fmt.Sprintf("%3d%%", pct)
+	pctStr := m.styles.Accent.Render(fmt.Sprintf("%3d%%", pct))
 
 	return m.boxLine(cursor + namePadded + "  " + bar + "  " + pctStr)
 }
@@ -123,7 +123,7 @@ func (m Model) viewSliderScreen(all bool) string {
 	// Slider bar row
 	maxVal := 100
 	bar := renderBar(m.sliderVal, maxVal, sliderBarWidth, m.styles)
-	pctStr := fmt.Sprintf("%3d%%", m.sliderVal)
+	pctStr := m.styles.Accent.Render(fmt.Sprintf("%3d%%", m.sliderVal))
 	sb.WriteString(m.boxLine("  " + bar + "  " + pctStr))
 
 	// Empty padding row
