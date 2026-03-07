@@ -43,6 +43,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.displays = msg.displays
 		return m, nil
 
+	case debounceFireMsg:
+		return m.handleDebounceFire(msg)
+
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 	}
@@ -92,10 +95,26 @@ func (m Model) handleNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keys.Slider):
 		m.mode = ModeSlider
-		// Start slider at average brightness.
 		m.sliderVal = m.avgBrightness()
 
-	// Digit keys → enter input mode (handled in commit 8; stub here)
+	case key.Matches(msg, m.keys.Inc):
+		return m.applyStep(m.cfg.Steps.Small)
+
+	case key.Matches(msg, m.keys.Dec):
+		return m.applyStep(-m.cfg.Steps.Small)
+
+	case key.Matches(msg, m.keys.IncMed):
+		return m.applyStep(m.cfg.Steps.Medium)
+
+	case key.Matches(msg, m.keys.DecMed):
+		return m.applyStep(-m.cfg.Steps.Medium)
+
+	case key.Matches(msg, m.keys.IncLrg):
+		return m.applyStep(m.cfg.Steps.Large)
+
+	case key.Matches(msg, m.keys.DecLrg):
+		return m.applyStep(-m.cfg.Steps.Large)
+
 	default:
 		k := msg.String()
 		if len(k) == 1 && k[0] >= '0' && k[0] <= '9' {
@@ -105,6 +124,44 @@ func (m Model) handleNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// applyStep updates local brightness optimistically and schedules a debounce timer.
+func (m Model) applyStep(delta int) (tea.Model, tea.Cmd) {
+	if m.selected < 0 || m.selected >= len(m.displays) {
+		return m, nil
+	}
+	d := &m.displays[m.selected]
+	maxVal := d.MaxVal
+	if maxVal <= 0 {
+		maxVal = 100
+	}
+	d.Brightness = clampInt(d.Brightness+delta, 0, maxVal)
+
+	// Increment debounce sequence for this display.
+	m.debounceSeq[d.Index]++
+	seq := m.debounceSeq[d.Index]
+	m.anyDebouncing = true
+
+	return m, debounceCmd(d.Index, d.Brightness, seq, m.cfg.Guardrails.DebounceMs)
+}
+
+// handleDebounceFire fires ddcutil only if the sequence still matches.
+func (m Model) handleDebounceFire(msg debounceFireMsg) (tea.Model, tea.Cmd) {
+	if m.debounceSeq[msg.displayIdx] != msg.seq {
+		// Stale timer — a newer keypress already superseded this.
+		return m, nil
+	}
+	// This is the latest timer for this display; clear debouncing state.
+	delete(m.debounceSeq, msg.displayIdx)
+	m.anyDebouncing = len(m.debounceSeq) > 0
+
+	i := m.findDisplayByIndex(msg.displayIdx)
+	if i < 0 {
+		return m, nil
+	}
+	d := m.displays[i]
+	return m, setBrightness(m.client, d, msg.value)
 }
 
 func (m Model) handleSliderKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

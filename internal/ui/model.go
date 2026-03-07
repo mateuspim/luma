@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"fmt"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -35,9 +36,14 @@ type Model struct {
 	// input state
 	inputBuf string
 
-	// debounce: pending value per display index
-	pendingVal map[int]int
-	debouncing map[int]bool
+	// debounce: sequence counter per display index
+	// When a step key fires, seq increments. The debounce timer carries
+	// the seq at the time it was started; if seq has changed by the time
+	// it fires, the timer is stale and is dropped.
+	debounceSeq map[int]int
+
+	// anyDebouncing is true if any display has a pending debounce timer.
+	anyDebouncing bool
 
 	loading bool
 	err     error
@@ -70,6 +76,13 @@ type debounceFireMsg struct {
 
 type tickMsg struct{}
 
+// debounceCmd returns a command that fires debounceFireMsg after debounceMs.
+func debounceCmd(displayIdx, value, seq, debounceMs int) tea.Cmd {
+	return tea.Tick(time.Duration(debounceMs)*time.Millisecond, func(_ time.Time) tea.Msg {
+		return debounceFireMsg{displayIdx: displayIdx, value: value, seq: seq}
+	})
+}
+
 type refreshDoneMsg struct {
 	displays []ddc.Display
 }
@@ -79,14 +92,13 @@ func New(cfg config.Config) Model {
 	exec := ddc.NewExecutor(cfg.Guardrails.MaxDdcutilProcs, cfg.Guardrails.CommandTimeoutS)
 	client := ddc.NewClient(exec)
 	return Model{
-		cfg:        cfg,
-		client:     client,
-		executor:   exec,
-		loading:    true,
-		pendingVal: make(map[int]int),
-		debouncing: make(map[int]bool),
-		styles:     newStyles(cfg.Theme.AccentColor),
-		keys:       defaultKeyMap(),
+		cfg:         cfg,
+		client:      client,
+		executor:    exec,
+		loading:     true,
+		debounceSeq: make(map[int]int),
+		styles:      newStyles(cfg.Theme.AccentColor),
+		keys:        defaultKeyMap(),
 	}
 }
 
