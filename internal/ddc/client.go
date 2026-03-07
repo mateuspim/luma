@@ -10,11 +10,13 @@ import (
 
 // Display represents a detected monitor.
 type Display struct {
-	Index      int
-	Name       string
-	Model      string
-	Brightness int
-	MaxVal     int
+	Index        int
+	Name         string
+	Model        string
+	Brightness   int
+	MaxVal       int
+	Disconnected bool
+	TimedOut     bool
 }
 
 var vcpRe = regexp.MustCompile(`current value\s*=\s*(\d+),\s*max value\s*=\s*(\d+)`)
