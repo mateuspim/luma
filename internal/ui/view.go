@@ -8,41 +8,88 @@ import (
 )
 
 const (
-	defaultBoxWidth       = 74
-	defaultListBarWidth   = 44 // = defaultBoxWidth - 30
-	defaultSliderBarWidth = 60 // = defaultBoxWidth - 14
-	nameColWidth          = 14
+	defaultBoxWidth = 74 // used only before first WindowSizeMsg
+	nameColWide     = 14
+	nameColCompact  = 10
 )
 
-// boxWidth returns the terminal-adaptive box width.
+// boxWidth returns the actual terminal width, falling back to defaultBoxWidth
+// before the first WindowSizeMsg arrives.
 func (m Model) boxWidth() int {
-	if m.width >= defaultBoxWidth {
+	if m.width > 0 {
 		return m.width
 	}
 	return defaultBoxWidth
 }
 
-// listBarWidth returns the gradient bar width for the list view.
+// nameColWidth returns the display name column width adapted to the terminal.
+func (m Model) nameColWidth() int {
+	bw := m.boxWidth()
+	switch {
+	case bw >= 74:
+		return nameColWide
+	case bw >= 40:
+		return nameColCompact
+	default:
+		// No bar: name fills the inner space minus cursor(2)+gap(2)+pct(4)+borders(2)
+		w := bw - 10
+		if w < 4 {
+			return 4
+		}
+		return w
+	}
+}
+
+// showBar returns true if there is enough room to render a gradient bar in list rows.
+func (m Model) showBar() bool {
+	return m.boxWidth() >= 40
+}
+
+// listGap returns the spacing string between row elements.
+func (m Model) listGap() string {
+	if m.boxWidth() >= 74 {
+		return "   "
+	}
+	return "  "
+}
+
+// listBarWidth returns the inner block count for the list gradient bar.
+// Only meaningful when showBar() is true.
+// Row layout: borders(2) + cursor(2) + name(ncw) + gap + caps(2) + gap + pct(4) = ncw + 2*gap + 10
 func (m Model) listBarWidth() int {
-	w := m.boxWidth() - 30
-	if w < defaultListBarWidth {
-		return defaultListBarWidth
+	bw := m.boxWidth()
+	ncw := m.nameColWidth()
+	gap := len(m.listGap())
+	w := bw - ncw - 2*gap - 10
+	if w < 1 {
+		return 1
 	}
 	return w
 }
 
-// sliderBarWidth returns the gradient bar width for the slider view.
+// sliderGap returns the spacing string around the slider bar.
+func (m Model) sliderGap() string {
+	if m.boxWidth() >= 56 {
+		return "   "
+	}
+	return "  "
+}
+
+// sliderBarWidth returns the inner block count for the slider gradient bar.
+// Row layout: borders(2) + gap + caps(2) + gap + pct(4) = 2*gap + 8
 func (m Model) sliderBarWidth() int {
-	w := m.boxWidth() - 14
-	if w < defaultSliderBarWidth {
-		return defaultSliderBarWidth
+	bw := m.boxWidth()
+	gap := len(m.sliderGap())
+	w := bw - 2*gap - 8
+	if w < 1 {
+		return 1
 	}
 	return w
 }
 
-// innerPad returns top and bottom empty-row counts to insert inside the box
-// so the total rendered lines equals m.height-1 (one line reserved to prevent
-// the top border from scrolling off screen). fixedLines is the count without padding.
+// innerPad returns top and bottom empty-row counts to insert inside the box so
+// the total rendered lines equals m.height-1 (one line reserved to prevent the
+// top border from scrolling off screen).
 func (m Model) innerPad(fixedLines int) (top, bottom int) {
 	effective := m.height - 1
 	if effective <= fixedLines {
@@ -52,6 +99,39 @@ func (m Model) innerPad(fixedLines int) (top, bottom int) {
 	top = extra / 2
 	bottom = extra - top
 	return
+}
+
+// listFooter returns help text for the list view, adapted to terminal width.
+func (m Model) listFooter() string {
+	s := m.cfg.Steps
+	sep := m.styles.Accent.Render(" ◆ ")
+	bw := m.boxWidth()
+	switch {
+	case bw >= 74:
+		return fmt.Sprintf("  ↑/↓ Enter · [a]ll · [q]uit%s+/- ±%d · [/] ±%d · {/} ±%d",
+			sep, s.Small, s.Medium, s.Large)
+	case bw >= 50:
+		return fmt.Sprintf("  ↑/↓ [a] [q]%s±%d · ±%d · ±%d",
+			sep, s.Small, s.Medium, s.Large)
+	default:
+		return fmt.Sprintf("  ↑↓ [a][q] ±%d ±%d ±%d", s.Small, s.Medium, s.Large)
+	}
+}
+
+// sliderFooter returns help text for the slider view, adapted to terminal width.
+func (m Model) sliderFooter() string {
+	s := m.cfg.Steps
+	bw := m.boxWidth()
+	switch {
+	case bw >= 74:
+		return fmt.Sprintf("  ←/→ ±%d · [/] ±%d · {/} ±%d · Enter apply · Esc back",
+			s.Small, s.Medium, s.Large)
+	case bw >= 50:
+		return fmt.Sprintf("  ←/→ ±%d · [/] ±%d · {/} ±%d  Enter Esc",
+			s.Small, s.Medium, s.Large)
+	default:
+		return fmt.Sprintf("  ←/→ ±%d/±%d/±%d  Enter Esc", s.Small, s.Medium, s.Large)
+	}
 }
 
 func (m Model) View() string {
@@ -84,7 +164,6 @@ func (m Model) viewList() string {
 
 	sb.WriteString("╭" + strings.Repeat("─", bw-2) + "╮\n")
 
-	// Header: ◈ luma with version and spinner when ddcutil is running
 	header := m.styles.Accent.Render("◈ luma " + m.version)
 	if m.executor.IsBusy() {
 		spinnerFrames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
@@ -105,10 +184,7 @@ func (m Model) viewList() string {
 	}
 
 	sb.WriteString("├" + strings.Repeat("─", bw-2) + "┤\n")
-	separator := m.styles.Accent.Render(" ◆ ")
-	footer := fmt.Sprintf("  ↑/↓ select · Enter slider · [a]ll · [q]uit%s+/- ±%d · [/] ±%d · {/} ±%d",
-		separator, m.cfg.Steps.Small, m.cfg.Steps.Medium, m.cfg.Steps.Large)
-	sb.WriteString(m.boxLine(footer))
+	sb.WriteString(m.boxLine(m.listFooter()))
 	sb.WriteString("╰" + strings.Repeat("─", bw-2) + "╯\n")
 
 	return sb.String()
@@ -117,8 +193,10 @@ func (m Model) viewList() string {
 // viewListRow renders one display row in the list.
 func (m Model) viewListRow(i int, d ddc.Display) string {
 	cursor := "  "
-	name := truncate(d.Name, nameColWidth)
-	namePadded := fmt.Sprintf("%-*s", nameColWidth, name)
+	ncw := m.nameColWidth()
+	name := truncate(d.Name, ncw)
+	namePadded := fmt.Sprintf("%-*s", ncw, name)
+	gap := m.listGap()
 
 	selected := i == m.selected
 	if selected {
@@ -126,14 +204,11 @@ func (m Model) viewListRow(i int, d ddc.Display) string {
 		namePadded = m.styles.AccentBold.Render(namePadded)
 	}
 
-	status := ""
 	if d.Disconnected {
-		status = m.styles.Error.Render(" [off]")
-		return m.boxLine(cursor + namePadded + status)
+		return m.boxLine(cursor + namePadded + m.styles.Error.Render(" [off]"))
 	}
 	if d.TimedOut {
-		status = m.styles.Error.Render(" [?]")
-		return m.boxLine(cursor + namePadded + status)
+		return m.boxLine(cursor + namePadded + m.styles.Error.Render(" [?]"))
 	}
 
 	maxVal := d.MaxVal
@@ -141,7 +216,6 @@ func (m Model) viewListRow(i int, d ddc.Display) string {
 		maxVal = 100
 	}
 	pct := d.Brightness * 100 / maxVal
-	bar := renderGradientBar(d.Brightness, maxVal, m.listBarWidth(), m.cfg.Theme.AccentColor)
 	pctStr := fmt.Sprintf("%3d%%", pct)
 	if selected {
 		pctStr = m.styles.AccentBold.Render(pctStr)
@@ -149,7 +223,12 @@ func (m Model) viewListRow(i int, d ddc.Display) string {
 		pctStr = m.styles.Accent.Render(pctStr)
 	}
 
-	return m.boxLine(cursor + namePadded + "   " + bar + "   " + pctStr)
+	if !m.showBar() {
+		return m.boxLine(cursor + namePadded + gap + pctStr)
+	}
+
+	bar := renderGradientBar(d.Brightness, maxVal, m.listBarWidth(), m.cfg.Theme.AccentColor)
+	return m.boxLine(cursor + namePadded + gap + bar + gap + pctStr)
 }
 
 // viewSliderScreen renders Screen 2 (per-display) or Screen 3 (all displays).
@@ -157,11 +236,11 @@ func (m Model) viewSliderScreen(all bool) string {
 	bw := m.boxWidth()
 	// fixed: top + header + sep + empty + bar + empty + sep + footer + bottom = 9
 	padTop, padBot := m.innerPad(9)
+	gap := m.sliderGap()
 	var sb strings.Builder
 
 	sb.WriteString("╭" + strings.Repeat("─", bw-2) + "╮\n")
 
-	// Header
 	var title string
 	if all {
 		title = "◈ luma " + m.version + " · All Displays"
@@ -180,11 +259,10 @@ func (m Model) viewSliderScreen(all bool) string {
 		sb.WriteString(m.boxLine(""))
 	}
 
-	// Empty padding row + bar + empty padding row (always present for visual breathing room)
 	sb.WriteString(m.boxLine(""))
 	bar := renderGradientBar(m.sliderVal, 100, m.sliderBarWidth(), m.cfg.Theme.AccentColor)
 	pctStr := m.styles.Accent.Render(fmt.Sprintf("%3d%%", m.sliderVal))
-	sb.WriteString(m.boxLine("   " + bar + "   " + pctStr))
+	sb.WriteString(m.boxLine(gap + bar + gap + pctStr))
 	sb.WriteString(m.boxLine(""))
 
 	for range padBot {
@@ -192,9 +270,7 @@ func (m Model) viewSliderScreen(all bool) string {
 	}
 
 	sb.WriteString("├" + strings.Repeat("─", bw-2) + "┤\n")
-	footer := fmt.Sprintf("  ←/→ ±%d · [/] ±%d · {/} ±%d · Enter apply · Esc back",
-		m.cfg.Steps.Small, m.cfg.Steps.Medium, m.cfg.Steps.Large)
-	sb.WriteString(m.boxLine(footer))
+	sb.WriteString(m.boxLine(m.sliderFooter()))
 	sb.WriteString("╰" + strings.Repeat("─", bw-2) + "╯\n")
 
 	return sb.String()
@@ -202,7 +278,6 @@ func (m Model) viewSliderScreen(all bool) string {
 
 func (m Model) viewError() string {
 	bw := m.boxWidth()
-	// fixed: top + header + sep + error + [install] + quit + bottom
 	fixedLines := 6
 	if isNotFound(m.err) {
 		fixedLines = 7
@@ -229,7 +304,6 @@ func (m Model) viewError() string {
 
 func (m Model) viewLoading() string {
 	bw := m.boxWidth()
-	// fixed: top + header + bottom = 3
 	padTop, padBot := m.innerPad(3)
 	var sb strings.Builder
 	sb.WriteString("╭" + strings.Repeat("─", bw-2) + "╮\n")
@@ -246,7 +320,6 @@ func (m Model) viewLoading() string {
 
 func (m Model) viewNoDisplays() string {
 	bw := m.boxWidth()
-	// fixed: top + header + sep + msg1 + msg2 + bottom = 6
 	padTop, padBot := m.innerPad(6)
 	var sb strings.Builder
 	sb.WriteString("╭" + strings.Repeat("─", bw-2) + "╮\n")
