@@ -8,11 +8,51 @@ import (
 )
 
 const (
-	boxWidth       = 74
-	listBarWidth   = 44 // fill blocks inside ╸...╺ caps, with 3-space padding each side
-	sliderBarWidth = 60
-	nameColWidth   = 14
+	defaultBoxWidth       = 74
+	defaultListBarWidth   = 44 // = defaultBoxWidth - 30
+	defaultSliderBarWidth = 60 // = defaultBoxWidth - 14
+	nameColWidth          = 14
 )
+
+// boxWidth returns the terminal-adaptive box width.
+func (m Model) boxWidth() int {
+	if m.width >= defaultBoxWidth {
+		return m.width
+	}
+	return defaultBoxWidth
+}
+
+// listBarWidth returns the gradient bar width for the list view.
+func (m Model) listBarWidth() int {
+	w := m.boxWidth() - 30
+	if w < defaultListBarWidth {
+		return defaultListBarWidth
+	}
+	return w
+}
+
+// sliderBarWidth returns the gradient bar width for the slider view.
+func (m Model) sliderBarWidth() int {
+	w := m.boxWidth() - 14
+	if w < defaultSliderBarWidth {
+		return defaultSliderBarWidth
+	}
+	return w
+}
+
+// innerPad returns top and bottom empty-row counts to insert inside the box
+// so the total rendered lines equals m.height-1 (one line reserved to prevent
+// the top border from scrolling off screen). fixedLines is the count without padding.
+func (m Model) innerPad(fixedLines int) (top, bottom int) {
+	effective := m.height - 1
+	if effective <= fixedLines {
+		return 0, 0
+	}
+	extra := effective - fixedLines
+	top = extra / 2
+	bottom = extra - top
+	return
+}
 
 func (m Model) View() string {
 	if m.err != nil {
@@ -37,9 +77,12 @@ func (m Model) View() string {
 
 // viewList renders Screen 1: the display list.
 func (m Model) viewList() string {
+	bw := m.boxWidth()
+	// fixed: top + header + sep + N displays + sep + footer + bottom = N + 6
+	padTop, padBot := m.innerPad(len(m.displays) + 6)
 	var sb strings.Builder
 
-	sb.WriteString("╭" + strings.Repeat("─", boxWidth-2) + "╮\n")
+	sb.WriteString("╭" + strings.Repeat("─", bw-2) + "╮\n")
 
 	// Header: ◈ luma with version and spinner when ddcutil is running
 	header := m.styles.Accent.Render("◈ luma " + m.version)
@@ -49,18 +92,24 @@ func (m Model) viewList() string {
 	}
 	sb.WriteString(m.boxLine(header))
 
-	sb.WriteString("├" + strings.Repeat("─", boxWidth-2) + "┤\n")
+	sb.WriteString("├" + strings.Repeat("─", bw-2) + "┤\n")
 
+	for range padTop {
+		sb.WriteString(m.boxLine(""))
+	}
 	for i, d := range m.displays {
 		sb.WriteString(m.viewListRow(i, d))
 	}
+	for range padBot {
+		sb.WriteString(m.boxLine(""))
+	}
 
-	sb.WriteString("├" + strings.Repeat("─", boxWidth-2) + "┤\n")
+	sb.WriteString("├" + strings.Repeat("─", bw-2) + "┤\n")
 	separator := m.styles.Accent.Render(" ◆ ")
 	footer := fmt.Sprintf("  ↑/↓ select · Enter slider · [a]ll · [q]uit%s+/- ±%d · [/] ±%d · {/} ±%d",
 		separator, m.cfg.Steps.Small, m.cfg.Steps.Medium, m.cfg.Steps.Large)
 	sb.WriteString(m.boxLine(footer))
-	sb.WriteString("╰" + strings.Repeat("─", boxWidth-2) + "╯\n")
+	sb.WriteString("╰" + strings.Repeat("─", bw-2) + "╯\n")
 
 	return sb.String()
 }
@@ -92,7 +141,7 @@ func (m Model) viewListRow(i int, d ddc.Display) string {
 		maxVal = 100
 	}
 	pct := d.Brightness * 100 / maxVal
-	bar := renderGradientBar(d.Brightness, maxVal, listBarWidth, m.cfg.Theme.AccentColor)
+	bar := renderGradientBar(d.Brightness, maxVal, m.listBarWidth(), m.cfg.Theme.AccentColor)
 	pctStr := fmt.Sprintf("%3d%%", pct)
 	if selected {
 		pctStr = m.styles.AccentBold.Render(pctStr)
@@ -105,9 +154,12 @@ func (m Model) viewListRow(i int, d ddc.Display) string {
 
 // viewSliderScreen renders Screen 2 (per-display) or Screen 3 (all displays).
 func (m Model) viewSliderScreen(all bool) string {
+	bw := m.boxWidth()
+	// fixed: top + header + sep + empty + bar + empty + sep + footer + bottom = 9
+	padTop, padBot := m.innerPad(9)
 	var sb strings.Builder
 
-	sb.WriteString("╭" + strings.Repeat("─", boxWidth-2) + "╮\n")
+	sb.WriteString("╭" + strings.Repeat("─", bw-2) + "╮\n")
 
 	// Header
 	var title string
@@ -122,65 +174,100 @@ func (m Model) viewSliderScreen(all bool) string {
 	rhs := "[q]uit"
 	sb.WriteString(m.boxRow(lhs, rhs))
 
-	sb.WriteString("├" + strings.Repeat("─", boxWidth-2) + "┤\n")
+	sb.WriteString("├" + strings.Repeat("─", bw-2) + "┤\n")
 
-	// Empty padding row
+	for range padTop {
+		sb.WriteString(m.boxLine(""))
+	}
+
+	// Empty padding row + bar + empty padding row (always present for visual breathing room)
 	sb.WriteString(m.boxLine(""))
-
-	// Slider bar row
-	bar := renderGradientBar(m.sliderVal, 100, sliderBarWidth, m.cfg.Theme.AccentColor)
+	bar := renderGradientBar(m.sliderVal, 100, m.sliderBarWidth(), m.cfg.Theme.AccentColor)
 	pctStr := m.styles.Accent.Render(fmt.Sprintf("%3d%%", m.sliderVal))
 	sb.WriteString(m.boxLine("   " + bar + "   " + pctStr))
-
-	// Empty padding row
 	sb.WriteString(m.boxLine(""))
 
-	sb.WriteString("├" + strings.Repeat("─", boxWidth-2) + "┤\n")
+	for range padBot {
+		sb.WriteString(m.boxLine(""))
+	}
+
+	sb.WriteString("├" + strings.Repeat("─", bw-2) + "┤\n")
 	footer := fmt.Sprintf("  ←/→ ±%d · [/] ±%d · {/} ±%d · Enter apply · Esc back",
 		m.cfg.Steps.Small, m.cfg.Steps.Medium, m.cfg.Steps.Large)
 	sb.WriteString(m.boxLine(footer))
-	sb.WriteString("╰" + strings.Repeat("─", boxWidth-2) + "╯\n")
+	sb.WriteString("╰" + strings.Repeat("─", bw-2) + "╯\n")
 
 	return sb.String()
 }
 
 func (m Model) viewError() string {
+	bw := m.boxWidth()
+	// fixed: top + header + sep + error + [install] + quit + bottom
+	fixedLines := 6
+	if isNotFound(m.err) {
+		fixedLines = 7
+	}
+	padTop, padBot := m.innerPad(fixedLines)
 	var sb strings.Builder
-	sb.WriteString("╭" + strings.Repeat("─", boxWidth-2) + "╮\n")
+	sb.WriteString("╭" + strings.Repeat("─", bw-2) + "╮\n")
 	sb.WriteString(m.boxLine(m.styles.Accent.Render("◈ luma " + m.version)))
-	sb.WriteString("├" + strings.Repeat("─", boxWidth-2) + "┤\n")
+	sb.WriteString("├" + strings.Repeat("─", bw-2) + "┤\n")
+	for range padTop {
+		sb.WriteString(m.boxLine(""))
+	}
 	sb.WriteString(m.boxLine(m.styles.Error.Render("  Error: " + m.err.Error())))
 	if isNotFound(m.err) {
 		sb.WriteString(m.boxLine("  Install ddcutil: https://www.ddcutil.com"))
 	}
 	sb.WriteString(m.boxLine("  Press q to quit"))
-	sb.WriteString("╰" + strings.Repeat("─", boxWidth-2) + "╯\n")
+	for range padBot {
+		sb.WriteString(m.boxLine(""))
+	}
+	sb.WriteString("╰" + strings.Repeat("─", bw-2) + "╯\n")
 	return sb.String()
 }
 
 func (m Model) viewLoading() string {
+	bw := m.boxWidth()
+	// fixed: top + header + bottom = 3
+	padTop, padBot := m.innerPad(3)
 	var sb strings.Builder
-	sb.WriteString("╭" + strings.Repeat("─", boxWidth-2) + "╮\n")
+	sb.WriteString("╭" + strings.Repeat("─", bw-2) + "╮\n")
+	for range padTop {
+		sb.WriteString(m.boxLine(""))
+	}
 	sb.WriteString(m.boxLine(m.styles.Accent.Render("◈ luma "+m.version) + m.styles.Busy.Render(" ⟳ detecting displays...")))
-	sb.WriteString("╰" + strings.Repeat("─", boxWidth-2) + "╯\n")
+	for range padBot {
+		sb.WriteString(m.boxLine(""))
+	}
+	sb.WriteString("╰" + strings.Repeat("─", bw-2) + "╯\n")
 	return sb.String()
 }
 
 func (m Model) viewNoDisplays() string {
+	bw := m.boxWidth()
+	// fixed: top + header + sep + msg1 + msg2 + bottom = 6
+	padTop, padBot := m.innerPad(6)
 	var sb strings.Builder
-	sb.WriteString("╭" + strings.Repeat("─", boxWidth-2) + "╮\n")
+	sb.WriteString("╭" + strings.Repeat("─", bw-2) + "╮\n")
 	sb.WriteString(m.boxLine(m.styles.Accent.Render("◈ luma " + m.version)))
-	sb.WriteString("├" + strings.Repeat("─", boxWidth-2) + "┤\n")
+	sb.WriteString("├" + strings.Repeat("─", bw-2) + "┤\n")
+	for range padTop {
+		sb.WriteString(m.boxLine(""))
+	}
 	sb.WriteString(m.boxLine("  No DDC/CI displays found. Check connections."))
 	sb.WriteString(m.boxLine("  Press q to quit."))
-	sb.WriteString("╰" + strings.Repeat("─", boxWidth-2) + "╯\n")
+	for range padBot {
+		sb.WriteString(m.boxLine(""))
+	}
+	sb.WriteString("╰" + strings.Repeat("─", bw-2) + "╯\n")
 	return sb.String()
 }
 
 // boxLine wraps content in │ borders, padding to boxWidth.
 func (m Model) boxLine(content string) string {
 	visible := visibleLen(content)
-	pad := boxWidth - 2 - visible
+	pad := m.boxWidth() - 2 - visible
 	if pad < 0 {
 		pad = 0
 	}
@@ -191,7 +278,7 @@ func (m Model) boxLine(content string) string {
 func (m Model) boxRow(left, right string) string {
 	lv := visibleLen(left)
 	rv := visibleLen(right)
-	inner := boxWidth - 2
+	inner := m.boxWidth() - 2
 	space := inner - lv - rv
 	if space < 1 {
 		space = 1
